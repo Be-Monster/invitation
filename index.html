@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes" />
   <title>Invitation</title>
   
   <!-- St.PageFlip Library -->
@@ -14,62 +14,45 @@
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
-      user-select: none;
     }
 
     body {
-      /* Soft luxury background */
-      background: radial-gradient(circle, #252427 0%, #111214 100%);
+      /* Soft neutral luxury backdrop that complements the card colors */
+      background: radial-gradient(circle, #2b2e33 0%, #151618 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 0 16px 0;
+      padding: 15px 0 20px 0;
       font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      overflow: hidden;
-      touch-action: none;
+      overflow-x: hidden;
+      touch-action: pan-x pan-y;
     }
 
-    /* Zoom & Pan Viewport */
-    .viewport {
+    .flipbook-container {
       width: 100%;
-      height: 78vh;
+      height: 75vh;
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      overflow: hidden;
-      cursor: grab;
-    }
-
-    .viewport:active {
-      cursor: grabbing;
-    }
-
-    .pan-container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      transition: transform 0.3s ease;
       transform-origin: center center;
-      transition: transform 0.1s ease-out;
-      will-change: transform;
-      /* Soft diffused outer glow with no dark harsh edge lines */
-      filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
     }
 
-    /* Completely remove any hard lines or borders from the library */
-    #book, 
-    .stf__parent, 
-    .stf__wrapper, 
-    .stf__item, 
-    .stf__page {
-      box-shadow: none !important;
-      border: none !important;
-      outline: none !important;
-      background: transparent !important;
+    /* Zoom mode styling */
+    .flipbook-container.zoomed {
+      transform: scale(1.45);
+      z-index: 10;
+    }
+
+    #book {
+      /* Soft, realistic ambient drop shadow (removes harsh dark lines) */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      border-radius: 2px;
+      overflow: hidden;
+      background: #ffffff;
     }
 
     /* Bottom Control Bar */
@@ -77,35 +60,158 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 6px;
-      z-index: 50;
+      gap: 8px;
+      z-index: 20;
     }
 
     .controls {
       display: flex;
       align-items: center;
-      gap: 10px;
-      background: rgba(255, 255, 255, 0.1);
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.08);
       padding: 6px 14px;
       border-radius: 30px;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
-    .btn {
-      background: rgba(255, 255, 255, 0.18);
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.15);
       color: #ffffff;
       border: none;
       border-radius: 50%;
-      width: 38px;
-      height: 38px;
+      width: 36px;
+      height: 36px;
       font-size: 15px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      transition: background 0.2s ease, transform 0.1s ease;
+    }
+
+    .nav-btn:active {
+      transform: scale(0.92);
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .page-indicator {
+      color: #f0f0f0;
+      font-size: 13px;
+      font-weight: 500;
+      min-width: 45px;
+      text-align: center;
+    }
+
+    .hint {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 11px;
+      letter-spacing: 0.4px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Flipbook Area -->
+  <div class="flipbook-container" id="bookWrapper">
+    <div id="book"></div>
+  </div>
+
+  <!-- Audio Element for Page Turn -->
+  <audio id="flipSound" preload="auto">
+    <source src="https://cdn.freesound.org/previews/566/566580_11861866-lq.mp3" type="audio/mp3">
+  </audio>
+
+  <!-- Navigation & Controls -->
+  <div class="controls-wrapper">
+    <div class="controls">
+      <button class="nav-btn" id="prevBtn" title="Previous Page">❮</button>
+      <span class="page-indicator" id="pageNumber">1 / 5</span>
+      <button class="nav-btn" id="nextBtn" title="Next Page">❯</button>
+      <button class="nav-btn" id="zoomBtn" title="Toggle Zoom">🔍</button>
+    </div>
+    <p class="hint">Swipe / tap arrows to flip • Tap 🔍 to zoom</p>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const bookEl = document.getElementById('book');
+      const bookWrapper = document.getElementById('bookWrapper');
+      const pageNumberEl = document.getElementById('pageNumber');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const zoomBtn = document.getElementById('zoomBtn');
+      const flipSound = document.getElementById('flipSound');
+
+      // Initialize St.PageFlip
+      const pageFlip = new St.PageFlip(bookEl, {
+        width: 400,
+        height: 600,
+        size: 'stretch',
+        minWidth: 260,
+        maxWidth: 600,
+        minHeight: 390,
+        maxHeight: 900,
+        maxShadowOpacity: 0.15, // Reduced shadow to eliminate dark harsh outlines
+        showCover: true,
+        usePortrait: true,
+        mobileScrollSupport: false
+      });
+
+      // Load all 5 JPGs in order
+      pageFlip.loadFromImages([
+        '1.jpg',
+        '2.jpg',
+        '3.jpg',
+        '4.jpg',
+        '5.jpg'
+      ]);
+
+      // Sound play function
+      function playTurnSound() {
+        if (flipSound) {
+          flipSound.currentTime = 0;
+          flipSound.play().catch(() => {
+            // Catches browser restrictions if user hasn't interacted yet
+          });
+        }
+      }
+
+      // Update counter and play sound on page flip
+      pageFlip.on('flip', (e) => {
+        pageNumberEl.textContent = `${e.data + 1} / 5`;
+        playTurnSound();
+      });
+
+      // Button listeners
+      prevBtn.addEventListener('click', () => pageFlip.flipPrev());
+      nextBtn.addEventListener('click', () => pageFlip.flipNext());
+
+      // Toggle Zoom Feature
+      let isZoomed = false;
+      zoomBtn.addEventListener('click', () => {
+        isZoomed = !isZoomed;
+        bookWrapper.classList.toggle('zoomed', isZoomed);
+        zoomBtn.style.background = isZoomed ? 'rgba(255, 255, 255, 0.4)' : '';
+      });
+
+      // Double-tap on the book to zoom in / out
+      let lastTap = 0;
+      bookEl.addEventListener('touchend', function (e) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+          isZoomed = !isZoomed;
+          bookWrapper.classList.toggle('zoomed', isZoomed);
+          zoomBtn.style.background = isZoomed ? 'rgba(255, 255, 255, 0.4)' : '';
+          e.preventDefault();
+        }
+        lastTap = currentTime;
+      });
+    });
+  </script>
+</body>
+</html>
       transition: background 0.15s, transform 0.1s;
     }
 
