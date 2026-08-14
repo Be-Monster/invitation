@@ -18,8 +18,8 @@
     }
 
     body {
-      /* Warm luxury dark background that highlights the invitation */
-      background: radial-gradient(circle, #252427 0%, #121214 100%);
+      /* Soft luxury background */
+      background: radial-gradient(circle, #252427 0%, #111214 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
@@ -56,18 +56,20 @@
       transform-origin: center center;
       transition: transform 0.1s ease-out;
       will-change: transform;
+      /* Soft diffused outer glow with no dark harsh edge lines */
+      filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.35));
     }
 
-    /* Flipbook styling without harsh lines */
-    #book {
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-      background: #ffffff;
+    /* Completely remove any hard lines or borders from the library */
+    #book, 
+    .stf__parent, 
+    .stf__wrapper, 
+    .stf__item, 
+    .stf__page {
+      box-shadow: none !important;
       border: none !important;
       outline: none !important;
-    }
-
-    .stf__wrapper {
-      box-shadow: none !important;
+      background: transparent !important;
     }
 
     /* Bottom Control Bar */
@@ -165,7 +167,7 @@
       const resetZoomBtn = document.getElementById('resetZoomBtn');
 
       /* ========================================================
-         1. BUILT-IN REALISTIC PAGE TURN SOUND (WEB AUDIO API)
+         1. SOFT, VELVETY REALISTIC PAPER TURN SOUND
          ======================================================== */
       let audioCtx = null;
       function playPaperSound() {
@@ -177,28 +179,37 @@
             audioCtx.resume();
           }
 
-          // Generate short, soft paper-swipe noise
-          const duration = 0.16;
+          const duration = 0.20; // 200 milliseconds
           const bufferSize = audioCtx.sampleRate * duration;
           const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
           const data = buffer.getChannelData(0);
 
+          // Smooth pink noise generator with zero initial pop/click
+          let b0 = 0, b1 = 0, b2 = 0;
           for (let i = 0; i < bufferSize; i++) {
-            data[i] = (Math.random() * 2 - 1) * Math.pow(1 - (i / bufferSize), 2.2);
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99 * b0 + white * 0.05;
+            b1 = 0.95 * b1 + white * 0.10;
+            b2 = 0.85 * b2 + white * 0.15;
+            const pink = b0 + b1 + b2;
+
+            // Hann curved envelope (soft attack & smooth fade out)
+            const envelope = Math.sin((Math.PI * i) / bufferSize);
+            data[i] = pink * envelope;
           }
 
           const noise = audioCtx.createBufferSource();
           noise.buffer = buffer;
 
+          // Bandpass filter centered at soft paper frequencies (550Hz)
           const filter = audioCtx.createBiquadFilter();
           filter.type = 'bandpass';
-          filter.frequency.setValueAtTime(1100, audioCtx.currentTime);
-          filter.frequency.exponentialRampToValueAtTime(320, audioCtx.currentTime + duration);
-          filter.Q.value = 1.1;
+          filter.frequency.setValueAtTime(600, audioCtx.currentTime);
+          filter.frequency.exponentialRampToValueAtTime(350, audioCtx.currentTime + duration);
+          filter.Q.value = 0.8;
 
           const gain = audioCtx.createGain();
-          gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
-          gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + duration);
+          gain.gain.setValueAtTime(0.20, audioCtx.currentTime); // Gentle volume
 
           noise.connect(filter);
           filter.connect(gain);
@@ -206,11 +217,11 @@
 
           noise.start();
         } catch (e) {
-          console.log("Audio not supported yet:", e);
+          console.log("Audio not active yet:", e);
         }
       }
 
-      // Unlock AudioContext on first touch
+      // Unlock audio on initial mobile touch
       window.addEventListener('touchstart', function unlockAudio() {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -218,7 +229,7 @@
       }, { once: true });
 
       /* ========================================================
-         2. INITIALIZE FLIPBOOK
+         2. INITIALIZE FLIPBOOK (Zero Harsh Shadows)
          ======================================================== */
       const pageFlip = new St.PageFlip(bookEl, {
         width: 400,
@@ -228,7 +239,7 @@
         maxWidth: 600,
         minHeight: 390,
         maxHeight: 900,
-        maxShadowOpacity: 0.12, /* Soft, realistic lighting */
+        maxShadowOpacity: 0, // Disabled dark shadow overlay
         showCover: true,
         usePortrait: true,
         mobileScrollSupport: false
@@ -245,7 +256,7 @@
       pageFlip.on('flip', (e) => {
         pageNumberEl.textContent = `${e.data + 1} / 5`;
         playPaperSound();
-        resetZoom(); // Reset pan when turning page
+        resetZoom();
       });
 
       prevBtn.addEventListener('click', () => {
@@ -259,7 +270,7 @@
       });
 
       /* ========================================================
-         3. ZOOM & DRAG/PAN SYSTEM (UP, DOWN, LEFT, RIGHT)
+         3. FULL PAN & DRAG (UP, DOWN, LEFT, RIGHT)
          ======================================================== */
       let scale = 1;
       let posX = 0;
@@ -273,16 +284,16 @@
       }
 
       function zoomIn() {
-        if (scale < 2.5) {
-          scale += 0.4;
-          statusHint.textContent = "Drag anywhere to move around";
+        if (scale < 2.8) {
+          scale += 0.45;
+          statusHint.textContent = "Drag anywhere with your finger to move";
           updateTransform();
         }
       }
 
       function zoomOut() {
         if (scale > 1) {
-          scale -= 0.4;
+          scale -= 0.45;
           if (scale <= 1) resetZoom();
           else updateTransform();
         }
@@ -300,7 +311,7 @@
       zoomOutBtn.addEventListener('click', zoomOut);
       resetZoomBtn.addEventListener('click', resetZoom);
 
-      // Touch Pan events (Mobile)
+      // Mobile Touch Dragging
       viewport.addEventListener('touchstart', (e) => {
         if (scale > 1 && e.touches.length === 1) {
           isDragging = true;
@@ -315,9 +326,9 @@
         posX = e.touches[0].clientX - startTouchX;
         posY = e.touches[0].clientY - startTouchY;
 
-        // Keep within reasonable screen bounds
-        const maxPanX = (scale - 1) * 200;
-        const maxPanY = (scale - 1) * 350;
+        // Boundaries matching zoom level
+        const maxPanX = (scale - 1) * 220;
+        const maxPanY = (scale - 1) * 380;
         posX = Math.max(-maxPanX, Math.min(maxPanX, posX));
         posY = Math.max(-maxPanY, Math.min(maxPanY, posY));
 
