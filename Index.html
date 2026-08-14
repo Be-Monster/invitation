@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>You're Invited!</title>
+  
+  <!-- St.PageFlip Library -->
+  <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: radial-gradient(circle, #232526 0%, #0f1011 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      touch-action: none; /* Prevents unwanted browser pull-to-refresh on mobile */
+    }
+
+    .flipbook-wrapper {
+      width: 100%;
+      height: 80vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #book {
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      border-radius: 4px;
+    }
+
+    /* Bottom Control Bar */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
+      transition: background 0.2s ease;
+    }
+
+    .nav-btn:active {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    .page-indicator {
+      color: #e0e0e0;
+      font-size: 13px;
+      letter-spacing: 1px;
+      font-weight: 500;
+    }
+
+    .hint {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 11px;
+      margin-top: 6px;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="flipbook-wrapper">
+    <div id="book"></div>
+  </div>
+
+  <div class="controls">
+    <button class="nav-btn" id="prevBtn" aria-label="Previous">❮</button>
+    <span class="page-indicator" id="pageNumber">1 / 5</span>
+    <button class="nav-btn" id="nextBtn" aria-label="Next">❯</button>
+  </div>
+
+  <p class="hint">Swipe, drag corner, or use arrows to flip</p>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const bookEl = document.getElementById('book');
+      const pageNumberEl = document.getElementById('pageNumber');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+
+      const pageFlip = new St.PageFlip(bookEl, {
+        width: 400,          // Base aspect ratio width
+        height: 600,         // Base aspect ratio height
+        size: 'stretch',
+        minWidth: 260,
+        maxWidth: 600,
+        minHeight: 390,
+        maxHeight: 900,
+        maxShadowOpacity: 0.6,
+        showCover: true,
+        usePortrait: true,   // Shows 1 page on mobile portrait, 2 on wide screens
+        mobileScrollSupport: false
+      });
+
+      // Load all 5 JPGs in order
+      pageFlip.loadFromImages([
+        '1.jpg',
+        '2.jpg',
+        '3.jpg',
+        '4.jpg',
+        '5.jpg'
+      ]);
+
+      // Update page counter indicator
+      pageFlip.on('flip', (e) => {
+        pageNumberEl.textContent = `${e.data + 1} / 5`;
+      });
+
+      // Navigation arrow buttons
+      prevBtn.addEventListener('click', () => pageFlip.flipPrev());
+      nextBtn.addEventListener('click', () => pageFlip.flipNext());
+    });
+  </script>
+</body>
+</html>
+
