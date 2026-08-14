@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>You're Invited!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes" />
+  <title>Invitation</title>
   
   <!-- St.PageFlip Library -->
   <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
@@ -17,105 +17,144 @@
     }
 
     body {
-      background: radial-gradient(circle, #232526 0%, #0f1011 100%);
+      /* Soft neutral luxury backdrop that complements the card colors */
+      background: radial-gradient(circle, #2b2e33 0%, #151618 100%);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
-      overflow: hidden;
+      justify-content: space-between;
+      padding: 15px 0 20px 0;
       font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      touch-action: none; /* Prevents unwanted browser pull-to-refresh on mobile */
+      overflow-x: hidden;
+      touch-action: pan-x pan-y;
     }
 
-    .flipbook-wrapper {
+    .flipbook-container {
       width: 100%;
-      height: 80vh;
+      height: 75vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
+      transition: transform 0.3s ease;
+      transform-origin: center center;
+    }
+
+    /* Zoom mode styling */
+    .flipbook-container.zoomed {
+      transform: scale(1.45);
+      z-index: 10;
     }
 
     #book {
-      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-      border-radius: 4px;
+      /* Soft, realistic ambient drop shadow (removes harsh dark lines) */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+      border-radius: 2px;
+      overflow: hidden;
+      background: #ffffff;
     }
 
     /* Bottom Control Bar */
+    .controls-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 20;
+    }
+
     .controls {
       display: flex;
       align-items: center;
-      gap: 16px;
-      margin-top: 14px;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 6px 14px;
+      border-radius: 30px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
     }
 
     .nav-btn {
-      background: rgba(255, 255, 255, 0.12);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      border: none;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      font-size: 16px;
+      width: 36px;
+      height: 36px;
+      font-size: 15px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      backdrop-filter: blur(5px);
-      transition: background 0.2s ease;
+      transition: background 0.2s ease, transform 0.1s ease;
     }
 
     .nav-btn:active {
-      background: rgba(255, 255, 255, 0.3);
+      transform: scale(0.92);
+      background: rgba(255, 255, 255, 0.35);
     }
 
     .page-indicator {
-      color: #e0e0e0;
+      color: #f0f0f0;
       font-size: 13px;
-      letter-spacing: 1px;
       font-weight: 500;
+      min-width: 45px;
+      text-align: center;
     }
 
     .hint {
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(255, 255, 255, 0.55);
       font-size: 11px;
-      margin-top: 6px;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.4px;
     }
   </style>
 </head>
 <body>
 
-  <div class="flipbook-wrapper">
+  <!-- Flipbook Area -->
+  <div class="flipbook-container" id="bookWrapper">
     <div id="book"></div>
   </div>
 
-  <div class="controls">
-    <button class="nav-btn" id="prevBtn" aria-label="Previous">❮</button>
-    <span class="page-indicator" id="pageNumber">1 / 5</span>
-    <button class="nav-btn" id="nextBtn" aria-label="Next">❯</button>
-  </div>
+  <!-- Audio Element for Page Turn -->
+  <audio id="flipSound" preload="auto">
+    <source src="https://cdn.freesound.org/previews/566/566580_11861866-lq.mp3" type="audio/mp3">
+  </audio>
 
-  <p class="hint">Swipe, drag corner, or use arrows to flip</p>
+  <!-- Navigation & Controls -->
+  <div class="controls-wrapper">
+    <div class="controls">
+      <button class="nav-btn" id="prevBtn" title="Previous Page">❮</button>
+      <span class="page-indicator" id="pageNumber">1 / 5</span>
+      <button class="nav-btn" id="nextBtn" title="Next Page">❯</button>
+      <button class="nav-btn" id="zoomBtn" title="Toggle Zoom">🔍</button>
+    </div>
+    <p class="hint">Swipe / tap arrows to flip • Tap 🔍 to zoom</p>
+  </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       const bookEl = document.getElementById('book');
+      const bookWrapper = document.getElementById('bookWrapper');
       const pageNumberEl = document.getElementById('pageNumber');
       const prevBtn = document.getElementById('prevBtn');
       const nextBtn = document.getElementById('nextBtn');
+      const zoomBtn = document.getElementById('zoomBtn');
+      const flipSound = document.getElementById('flipSound');
 
+      // Initialize St.PageFlip
       const pageFlip = new St.PageFlip(bookEl, {
-        width: 400,          // Base aspect ratio width
-        height: 600,         // Base aspect ratio height
+        width: 400,
+        height: 600,
         size: 'stretch',
         minWidth: 260,
         maxWidth: 600,
         minHeight: 390,
         maxHeight: 900,
-        maxShadowOpacity: 0.6,
+        maxShadowOpacity: 0.15, // Reduced shadow to eliminate dark harsh outlines
         showCover: true,
-        usePortrait: true,   // Shows 1 page on mobile portrait, 2 on wide screens
+        usePortrait: true,
         mobileScrollSupport: false
       });
 
@@ -128,16 +167,48 @@
         '5.jpg'
       ]);
 
-      // Update page counter indicator
+      // Sound play function
+      function playTurnSound() {
+        if (flipSound) {
+          flipSound.currentTime = 0;
+          flipSound.play().catch(() => {
+            // Catches browser restrictions if user hasn't interacted yet
+          });
+        }
+      }
+
+      // Update counter and play sound on page flip
       pageFlip.on('flip', (e) => {
         pageNumberEl.textContent = `${e.data + 1} / 5`;
+        playTurnSound();
       });
 
-      // Navigation arrow buttons
+      // Button listeners
       prevBtn.addEventListener('click', () => pageFlip.flipPrev());
       nextBtn.addEventListener('click', () => pageFlip.flipNext());
+
+      // Toggle Zoom Feature
+      let isZoomed = false;
+      zoomBtn.addEventListener('click', () => {
+        isZoomed = !isZoomed;
+        bookWrapper.classList.toggle('zoomed', isZoomed);
+        zoomBtn.style.background = isZoomed ? 'rgba(255, 255, 255, 0.4)' : '';
+      });
+
+      // Double-tap on the book to zoom in / out
+      let lastTap = 0;
+      bookEl.addEventListener('touchend', function (e) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+          isZoomed = !isZoomed;
+          bookWrapper.classList.toggle('zoomed', isZoomed);
+          zoomBtn.style.background = isZoomed ? 'rgba(255, 255, 255, 0.4)' : '';
+          e.preventDefault();
+        }
+        lastTap = currentTime;
+      });
     });
   </script>
 </body>
 </html>
-
